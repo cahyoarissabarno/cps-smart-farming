@@ -12,9 +12,9 @@ GPIO.setup(AIN1, GPIO.OUT)
 GPIO.setup(AIN2, GPIO.OUT)
 GPIO.setup(STBY, GPIO.OUT)
 
-GPIO.output(AIN1, GPIO.LOW)
-GPIO.output(AIN2, GPIO.LOW)
-GPIO.output(STBY, GPIO.LOW)
+# GPIO.output(AIN1, GPIO.LOW)
+# GPIO.output(AIN2, GPIO.LOW)
+# GPIO.output(STBY, GPIO.LOW)
 
 def motor_on():
     # Menyalakan motor dengan AIN1 HIGH dan AIN2 LOW (rotasi searah)

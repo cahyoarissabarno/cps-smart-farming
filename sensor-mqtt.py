@@ -54,15 +54,15 @@ def read_all_parameters():
         phosphorus = (6.88 / 16) * nitrogen
         potassium = (13.28 / 16) * nitrogen
 
-        # Tampilkan hasil pembacaan
+        # Tampilkan hasil pembacaan dengan satuan
         sensor_data = {
-            "Soil Humidity": humidity,
-            "Soil Temperature": temperature,
-            "Soil Conductivity": conductivity,
-            "Soil pH": ph,
-            "Nitrogen": nitrogen,
-            "Phosphorus": round(phosphorus),
-            "Potassium": round(potassium)
+            "Soil Humidity (%)": f"{humidity} %",
+            "Soil Temperature (°C)": f"{temperature} °C",
+            "Soil Conductivity (us/cm)": f"{conductivity} us/cm",
+            "Soil pH": f"{ph}",
+            "Nitrogen (mg/L)": f"{nitrogen} mg/L",
+            "Phosphorus (mg/L)": f"{round(phosphorus)} mg/L",
+            "Potassium (mg/L)": f"{round(potassium)} mg/L"
         }
         return sensor_data
     else:
@@ -74,7 +74,6 @@ client.connect(hostname, broker_port, 60)
 client.loop_start()
 
 # Loop untuk membaca semua sensor berulang kali dan mengirimkan hasil melalui MQTT
-# while True:
 print("############")
 sensor_data = read_all_parameters()  # Membaca semua parameter
 if sensor_data:
@@ -88,8 +87,6 @@ else:
     print("Tidak ada data yang diterima.")
 
 print("############")
-# time.sleep(30)  # Tunggu 30 detik sebelum pembacaan berikutnyas
-
 # Tutup komunikasi serial dan loop MQTT
 client.loop_stop()
 ser.close()
