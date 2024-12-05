@@ -12,6 +12,8 @@ GPIO.setup(PWM_PIN, GPIO.OUT)
 GPIO.setup(AIN2, GPIO.OUT)
 GPIO.setup(STBY, GPIO.OUT)
 
+#====================
+
 # Inisialisasi PWM pada pin PWM_PIN (GPIO 12)
 pwm_motor = GPIO.PWM(PWM_PIN, 100)  # 100Hz frekuensi PWM
 pwm_motor.start(0)  # Mulai PWM dengan duty cycle 0%

@@ -1,6 +1,10 @@
 import serial
 import time
 import paho.mqtt.client as mqtt
+import Adafruit_DHT
+
+DHT = Adafruit_DHT.DHT11
+DHT_PIN = 23  
 
 # Konfigurasi MQTT
 hostname = "127.0.0.1"
@@ -53,6 +57,7 @@ def read_all_parameters():
         nitrogen = response[13] << 8 | response[14]  # Nitrogen dalam mg/L
         phosphorus = (6.88 / 16) * nitrogen
         potassium = (13.28 / 16) * nitrogen
+        air_hum, air_temp = Adafruit_DHT.read(DHT, DHT_PIN)
 
         # Tampilkan hasil pembacaan dengan satuan
         sensor_data = {
@@ -62,7 +67,9 @@ def read_all_parameters():
             "Soil pH": f"{ph}",
             "Nitrogen (mg/L)": f"{nitrogen} mg/L",
             "Phosphorus (mg/L)": f"{round(phosphorus)} mg/L",
-            "Potassium (mg/L)": f"{round(potassium)} mg/L"
+            "Potassium (mg/L)": f"{round(potassium)} mg/L",
+	        "Air_Temp (C)": f"{round(air_temp)} C",
+	        "Air_Hum (%)": f"{round(air_hum)} %"
         }
         return sensor_data
     else:
@@ -90,3 +97,4 @@ print("############")
 # Tutup komunikasi serial dan loop MQTT
 client.loop_stop()
 ser.close()
+
