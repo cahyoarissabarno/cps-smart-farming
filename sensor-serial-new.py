@@ -37,7 +37,7 @@ sensor_ser_1 = serial.Serial(port='/dev/ttyUSB0',baudrate=4800,parity=serial.PAR
 # Konfigurasi komunikasi serial untuk mengirim data
 output_ser = serial.Serial(port='/dev/ttyS0',baudrate=9600,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=2)
 
-def read_all_parameters(device_id, plant_name):
+def read_all_parameters(device_id, plant_name, plant_id):
     if device_id == 1:
         print("get data via sensor 1")
         sensor_ser_1.write(query_all)
@@ -109,7 +109,8 @@ def read_all_parameters(device_id, plant_name):
             "air_temp": round(air_temp),
             "air_hum": round(air_hum),
             "tanaman": plant_name,
-            "tanaman_no": device_id
+            "tanaman_no": plant_id,
+            "soil_sensor_id": device_id
         }
         return sensor_data_json
     else:
@@ -118,7 +119,7 @@ def read_all_parameters(device_id, plant_name):
 
 # Loop untuk membaca semua sensor berulang kali dan mengirimkan hasil melalui Serial
 print("############")
-sensor_data = read_all_parameters(1, "cabai")  # Membaca semua parameter
+sensor_data = read_all_parameters(1, "cabai", 1)  # Membaca semua parameter
 # sensor_data = {"test":"testing"}
 print("Data get:", sensor_data)
 
@@ -134,7 +135,7 @@ if sensor_data:
 
     # Kirim data sensor sebagai payload JSON melalui API
     try:
-        response = requests.post("http://127.0.0.1:5000/api/add_data", json=sensor_data)  # Kirim data ke API
+        response = requests.post("http://127.0.0.1:8000/api/add_data", json=sensor_data)  # Kirim data ke API
         if response.status_code == 201:
             print("Data sent to DB via API successfully!")
         else:

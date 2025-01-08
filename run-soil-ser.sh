@@ -18,5 +18,5 @@ while true; do
     deactivate
     
     # Wait for 60 seconds
-    sleep 60
+    sleep 600
 done
