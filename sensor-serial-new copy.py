@@ -37,35 +37,6 @@ sensor_ser_1 = serial.Serial(port='/dev/ttyUSB0',baudrate=4800,parity=serial.PAR
 # Konfigurasi komunikasi serial untuk mengirim data
 output_ser = serial.Serial(port='/dev/ttyS0',baudrate=9600,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=2)
 
-def control_pumps(moisture, temperature):
-    Hmin, Hmax = 40.0, 60.0  # Batas kelembapan tanah optimal
-    Tmin, Tmax = 18.0, 30.0  # Batas suhu tanah optimal
-    print("checking pump ....")
-    
-    if moisture < Hmin or temperature > Tmax:
-        try:
-            # Nyalakan motor1 selama 10 detik
-            response = requests.post("http://192.168.9.59:5000/motor1", json={"direction": "forward", "speed": 90})
-            print("Pompa air dinyalakan:", response.status_code)
-            time.sleep(10)
-            
-            # Matikan motor1
-            response = requests.post("http://192.168.9.59:5000/motor1/off")
-            print("Pompa air dimatikan:", response.status_code)
-            
-            # Nyalakan motor2 selama 10 detik
-            response = requests.post("http://192.168.9.59:5000/motor2", json={"direction": "forward", "speed": 90})
-            print("Pompa pupuk dinyalakan:", response.status_code)
-            time.sleep(10)
-            
-            # Matikan motor2
-            response = requests.post("http://192.168.9.59:5000/motor2/off")
-            print("Pompa pupuk dimatikan:", response.status_code)
-        except Exception as e:
-            print("Gagal mengontrol pompa:", str(e))
-    else:
-        print("Kondisi tanah optimal, tidak perlu menyalakan pompa.")
-
 def read_all_parameters(device_id, plant_name, plant_id):
     if device_id == 1:
         print("get data via sensor 1")
@@ -141,9 +112,6 @@ def read_all_parameters(device_id, plant_name, plant_id):
             "tanaman_no": plant_id,
             "soil_sensor_id": device_id
         }
-
-        control_pumps(humidity, temperature)
-
         return sensor_data_json
     else:
         print("Failed to read data or incorrect data length.")
