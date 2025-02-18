@@ -149,35 +149,48 @@ def read_all_parameters(device_id, plant_name, plant_id):
         print("Failed to read data or incorrect data length.")
         return None
 
-# Loop untuk membaca semua sensor berulang kali dan mengirimkan hasil melalui Serial
-print("############")
-sensor_data = read_all_parameters(1, "cabai", 1)  # Membaca semua parameter
-# sensor_data = {"test":"testing"}
-print("Data get:", sensor_data)
+try:
+    data = requests.get("http://192.168.1.2:8000/api/tanaman").json().get("data", [])
+    for item in data:
+        # Loop untuk membaca semua sensor berulang kali dan mengirimkan hasil melalui Serial
+        print("#####" + str(item["soil_sensor_id"]) + item["tanaman"] + str(item["tanaman_no"]) + "#####")
+        
+        data_sensor = requests.get("http://192.168.1.2:8000/api/sensor?tanaman_no=" + str(item["tanaman_no"]) + "&device_id=" + str(item["soil_sensor_id"])).json().get("data", [])
+        print("tanaman_no=" + str(item["tanaman_no"]) + "&device_id=" + str(item["soil_sensor_id"]))
+        
+        # sensor_data = read_all_parameters(1, "cabai", 1)  # Membaca semua parameter
+        sensor_data = read_all_parameters(item["soil_sensor_id"], item["tanaman"], item["tanaman_no"])
+        # sensor_data = {"test":"testing"}
+        print("Data get:", sensor_data)
 
-if sensor_data:
-    # Menampilkan data sensor
-    for key, value in sensor_data.items():
-        print(f"{key}: {value}")
+        if sensor_data:
+            # Menampilkan data sensor
+            for key, value in sensor_data.items():
+                print(f"{key}: {value}")
 
-    # Kirim data sensor sebagai payload JSON melalui port serial output
-    serial_data = str(sensor_data).encode('utf-8')
-    output_ser.write(serial_data)
-    print("Data sent to serial:", sensor_data)
+            # Kirim data sensor sebagai payload JSON melalui port serial output
+            serial_data = str(sensor_data).encode('utf-8')
+            output_ser.write(serial_data)
+            print("Data sent to serial:", sensor_data)
 
-    # Kirim data sensor sebagai payload JSON melalui API
-    try:
-        response = requests.post("http://127.0.0.1:8000/api/add_data", json=sensor_data)  # Kirim data ke API
-        if response.status_code == 201:
-            print("Data sent to DB via API successfully!")
+            # Kirim data sensor sebagai payload JSON melalui API
+            try:
+                response = requests.post("http://127.0.0.1:8000/api/add_data", json=sensor_data)  # Kirim data ke API
+                if response.status_code == 201:
+                    print("Data sent to DB via API successfully!")
+                else:
+                    print(f"Failed to send data to API: {response.status_code}, {response.text}")
+            except Exception as e:
+                print(f"Error sending data to API: {str(e)}")
         else:
-            print(f"Failed to send data to API: {response.status_code}, {response.text}")
-    except Exception as e:
-        print(f"Error sending data to API: {str(e)}")
-else:
-    print("Tidak ada data yang diterima.")
+            print("Tidak ada data yang diterima.")
 
-print("############")
+        print("###### END #####")
+
+except requests.exceptions.RequestException as e:
+    print(f"Error: {e}")
+
+
 # Tutup komunikasi serial dan loop MQTT
 output_ser.close()  # Tutup port untuk mengirim data
 sensor_ser_1.close()
