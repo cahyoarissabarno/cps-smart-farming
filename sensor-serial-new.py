@@ -27,65 +27,121 @@ def append_crc(query):
 
 # Query untuk membaca semua parameter (kelembapan, suhu, konduktivitas, pH, N, P, K)
 query_all = append_crc(bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x07]))
+# output_ser = None
+# Fungsi untuk mengambil interface dari database
+def get_sensor_interface(device_id, tanaman_no):
+    try:
+        print("Getting Interface Data From device_id: " + str(device_id) + ", tanaman_no: " + str(tanaman_no))
+        response = requests.get(f"http://192.168.1.2:8000/api/sensor?device_id={device_id}&tanaman_no={tanaman_no}")
+        if response.status_code == 200:
+            sensor_data = response.json().get("data", [])
+            if sensor_data:
+                return sensor_data[0]['interface']  # Ambil nilai interface dari data sensor
+        print("Gagal mengambil data interface dari database")
+        return None
+    except Exception as e:
+        print(f"Error mengambil data interface: {str(e)}")
+        return None
 
-# Membuka komunikasi serial dengan konverter RS485 to USB
-sensor_ser_1 = serial.Serial(port='/dev/ttyUSB0',baudrate=4800,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=2)
-# sensor_ser_2 = serial.Serial(port='/dev/ttyUSB1',baudrate=4800,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=2)
-# sensor_ser_3 = serial.Serial(port='/dev/ttyUSB2',baudrate=4800,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=2)
-# sensor_ser_4 = serial.Serial(port='/dev/ttyUSB3',baudrate=4800,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=2)
+# Fungsi untuk membuka koneksi serial berdasarkan interface
+def open_serial_connection(interface):
+    print("Open Conncetion From Interface " + interface)
+    try:
+        ser = serial.Serial(
+            port=interface,
+            baudrate=4800,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            bytesize=serial.EIGHTBITS,
+            timeout=2
+        )
+        return ser
+    except Exception as e:
+        print(f"Gagal membuka koneksi serial pada {interface}: {str(e)}")
+        return None
 
-# Konfigurasi komunikasi serial untuk mengirim data
-output_ser = serial.Serial(port='/dev/ttyS0',baudrate=9600,parity=serial.PARITY_NONE,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=2)
-
-def control_pumps(moisture, temperature):
-    Hmin, Hmax = 40.0, 60.0  # Batas kelembapan tanah optimal
-    Tmin, Tmax = 18.0, 30.0  # Batas suhu tanah optimal
-    print("checking pump ....")
-    
-    if moisture < Hmin or temperature > Tmax:
-        try:
-            # Nyalakan motor1 selama 10 detik
-            response = requests.post("http://192.168.9.59:5000/motor1", json={"direction": "forward", "speed": 90})
-            print("Pompa air dinyalakan:", response.status_code)
-            time.sleep(10)
+def control_pumps(moisture, temperature, tanaman_no, tanaman_name):
+    try:
+        # Ambil parameter dari tabel pump_params berdasarkan tanaman_no
+        response = requests.get(f"http://192.168.1.2:8000/api/pump_params?tanaman_no={tanaman_no}")
+        if response.status_code != 200:
+            print("Gagal mengambil data pump_params")
+            return
+        
+        pump_params = response.json()
+        if not pump_params:
+            print("Data pump_params tidak ditemukan")
+            return
+        
+        # Ambil nilai hmin, hmax, tmin, tmax
+        hmin = pump_params[0]['h_min']
+        hmax = pump_params[0]['h_max']
+        tmin = pump_params[0]['t_min']
+        tmax = pump_params[0]['t_max']
+        
+        print(f"Parameter: Hmin={hmin}, Hmax={hmax}, Tmin={tmin}, Tmax={tmax}")
+        
+        # Logika kontrol pompa
+        if moisture < hmin or temperature > tmax:
+            pump_type = "water" if moisture < hmin else "nutrition"
+            duration = 10  # Durasi pompa menyala (dalam detik)
+            volume = 100.0  # Volume air/pupuk (dalam liter)
             
-            # Matikan motor1
-            response = requests.post("http://192.168.9.59:5000/motor1/off")
-            print("Pompa air dimatikan:", response.status_code)
+            # Nyalakan motor berdasarkan pump_type
+            if pump_type == "water":
+                motor_endpoint = "http://192.168.9.59:5000/motor2"
+                motor_off_endpoint = "http://192.168.9.59:5000/motor2/off"
+            else:
+                motor_endpoint = "http://192.168.9.59:5000/motor1"
+                motor_off_endpoint = "http://192.168.9.59:5000/motor1/off"
             
-            # Nyalakan motor2 selama 10 detik
-            response = requests.post("http://192.168.9.59:5000/motor2", json={"direction": "forward", "speed": 90})
-            print("Pompa pupuk dinyalakan:", response.status_code)
-            time.sleep(10)
-            
-            # Matikan motor2
-            response = requests.post("http://192.168.9.59:5000/motor2/off")
-            print("Pompa pupuk dimatikan:", response.status_code)
-        except Exception as e:
-            print("Gagal mengontrol pompa:", str(e))
-    else:
-        print("Kondisi tanah optimal, tidak perlu menyalakan pompa.")
+            try:
+                # Nyalakan motor
+                response = requests.post(motor_endpoint, json={"direction": "forward", "speed": 90})
+                print(f"Pompa {pump_type} dinyalakan:", response.status_code)
+                time.sleep(duration)
+                
+                # Matikan motor
+                response = requests.post(motor_off_endpoint)
+                print(f"Pompa {pump_type} dimatikan:", response.status_code)
+                
+                # Simpan history ke database
+                history_data = {
+                    "tanaman": tanaman_name,
+                    "tanaman_no": tanaman_no,
+                    "pump_type": pump_type,
+                    "duration": duration,
+                    "volume": volume
+                }
+                response = requests.post("http://192.168.1.2:8000/api/pump_history", json=history_data)
+                if response.status_code == 201:
+                    print("History pompa berhasil disimpan")
+                else:
+                    print("Gagal menyimpan history pompa:", response.text)
+            except Exception as e:
+                print("Gagal mengontrol pompa:", str(e))
+        else:
+            print("Kondisi tanah optimal, tidak perlu menyalakan pompa.")
+    except Exception as e:
+        print("Error dalam kontrol pompa:", str(e))
 
 def read_all_parameters(device_id, plant_name, plant_id):
-    if device_id == 1:
-        print("get data via sensor 1")
-        sensor_ser_1.write(query_all)
-        time.sleep(0.1)
-        response = sensor_ser_1.read(17)
-    # elif device_id == 2:
-    #     sensor_ser_2.write(query_all)
-    #     time.sleep(0.1)
-    #     response = sensor_ser_2.read(17)
-    # elif device_id == 3:
-    #     sensor_ser_3.write(query_all)
-    #     time.sleep(0.1)
-    #     response = sensor_ser_3.read(17)
-    # elif device_id == 4:
-    #     sensor_ser_4.write(query_all)
-    #     time.sleep(0.1)
-    #     response = sensor_ser_4.read(17)
-    else:
-        raise ValueError("Invalid device ID")
+    # Ambil interface dari database
+    interface = get_sensor_interface(device_id, plant_id)
+    if not interface:
+        print("Interface tidak ditemukan untuk device_id dan tanaman_no ini")
+        return None
+    
+    # Buka koneksi serial berdasarkan interface
+    sensor_ser = open_serial_connection(interface)
+    if not sensor_ser:
+        return None
+    
+    # Kirim query dan baca respons
+    sensor_ser.write(query_all)
+    time.sleep(0.1)
+    response = sensor_ser.read(17)
+    sensor_ser.close()  # Tutup koneksi serial setelah selesai
 
     if len(response) == 17:
         # Parsing data dari respons
@@ -142,7 +198,8 @@ def read_all_parameters(device_id, plant_name, plant_id):
             "soil_sensor_id": device_id
         }
 
-        control_pumps(humidity, temperature)
+        # Panggil fungsi kontrol pompa
+        control_pumps(humidity, temperature, plant_id, plant_name)
 
         return sensor_data_json
     else:
@@ -152,30 +209,15 @@ def read_all_parameters(device_id, plant_name, plant_id):
 try:
     data = requests.get("http://192.168.1.2:8000/api/tanaman").json().get("data", [])
     for item in data:
-        # Loop untuk membaca semua sensor berulang kali dan mengirimkan hasil melalui Serial
-        print("#####" + str(item["soil_sensor_id"]) + item["tanaman"] + str(item["tanaman_no"]) + "#####")
+        print("#####" + "soil_sensor_id: " + str(item["soil_sensor_id"]) + "tanaman: " + item["tanaman"] + "tanaman_no: " + str(item["tanaman_no"]) + "#####")
         
-        data_sensor = requests.get("http://192.168.1.2:8000/api/sensor?tanaman_no=" + str(item["tanaman_no"]) + "&device_id=" + str(item["soil_sensor_id"])).json().get("data", [])
-        print("tanaman_no=" + str(item["tanaman_no"]) + "&device_id=" + str(item["soil_sensor_id"]))
-        
-        # sensor_data = read_all_parameters(1, "cabai", 1)  # Membaca semua parameter
         sensor_data = read_all_parameters(item["soil_sensor_id"], item["tanaman"], item["tanaman_no"])
-        # sensor_data = {"test":"testing"}
         print("Data get:", sensor_data)
 
         if sensor_data:
-            # Menampilkan data sensor
-            for key, value in sensor_data.items():
-                print(f"{key}: {value}")
-
-            # Kirim data sensor sebagai payload JSON melalui port serial output
-            serial_data = str(sensor_data).encode('utf-8')
-            output_ser.write(serial_data)
-            print("Data sent to serial:", sensor_data)
-
             # Kirim data sensor sebagai payload JSON melalui API
             try:
-                response = requests.post("http://127.0.0.1:8000/api/add_data", json=sensor_data)  # Kirim data ke API
+                response = requests.post("http://127.0.0.1:8000/api/add_data", json=sensor_data)
                 if response.status_code == 201:
                     print("Data sent to DB via API successfully!")
                 else:
@@ -190,8 +232,5 @@ try:
 except requests.exceptions.RequestException as e:
     print(f"Error: {e}")
 
-
 # Tutup komunikasi serial dan loop MQTT
-output_ser.close()  # Tutup port untuk mengirim data
-sensor_ser_1.close()
-
+# output_ser.close()  # Tutup port untuk mengirim data
