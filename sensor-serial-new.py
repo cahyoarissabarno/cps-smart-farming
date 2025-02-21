@@ -78,22 +78,27 @@ def control_pumps(moisture, temperature, tanaman_no, tanaman_name):
         hmax = pump_params[0]['h_max']
         tmin = pump_params[0]['t_min']
         tmax = pump_params[0]['t_max']
+        water_duration = pump_params[0]['water_duration']
+        water_volume = pump_params[0]['water_volume']
+        nutri_duration = pump_params[0]['nutri_duration']
+        nutri_volume = pump_params[0]['nutri_volume']
         
         print(f"Parameter: Hmin={hmin}, Hmax={hmax}, Tmin={tmin}, Tmax={tmax}")
         
         # Logika kontrol pompa
         if moisture < hmin or temperature > tmax:
-            pump_type = "water" if moisture < hmin else "nutrition"
-            duration = 10  # Durasi pompa menyala (dalam detik)
-            volume = 100.0  # Volume air/pupuk (dalam liter)
+            pump_type = "water" 
+            # pump_type = "water" if moisture < hmin else "nutrition"
+            # duration =   # Durasi get from db
+            # volume = 100.0  # Volume air/pupuk (dalam mililiter)
             
             # Nyalakan motor berdasarkan pump_type
-            if pump_type == "water":
-                motor_endpoint = "http://192.168.9.59:5000/motor2"
-                motor_off_endpoint = "http://192.168.9.59:5000/motor2/off"
-            else:
-                motor_endpoint = "http://192.168.9.59:5000/motor1"
-                motor_off_endpoint = "http://192.168.9.59:5000/motor1/off"
+            # if pump_type == "water":
+            motor_endpoint = "http://192.168.9.59:5000/motor2"
+            motor_off_endpoint = "http://192.168.9.59:5000/motor2/off"
+            # else:
+            #     motor_endpoint = "http://192.168.9.59:5000/motor1"
+            #     motor_off_endpoint = "http://192.168.9.59:5000/motor1/off"
             
             try:
                 # Nyalakan motor
@@ -110,6 +115,7 @@ def control_pumps(moisture, temperature, tanaman_no, tanaman_name):
                     "tanaman": tanaman_name,
                     "tanaman_no": tanaman_no,
                     "pump_type": pump_type,
+                    "method": "auto",
                     "duration": duration,
                     "volume": volume
                 }
