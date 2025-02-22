@@ -87,50 +87,56 @@ def control_pumps(moisture, temperature, tanaman_no, tanaman_name):
         
         # Logika kontrol pompa
         if moisture < hmin or temperature > tmax:
-            pump_type = "water" 
-            # pump_type = "water" if moisture < hmin else "nutrition"
-            # duration =   # Durasi get from db
-            # volume = 100.0  # Volume air/pupuk (dalam mililiter)
+            # Daftar pompa yang akan dijalankan secara bergantian
+            pumps = [
+                {"type": "water", "duration": water_duration, "volume": water_volume},
+                {"type": "nutrition", "duration": nutri_duration, "volume": nutri_volume}
+            ]
             
-            # Nyalakan motor berdasarkan pump_type
-            # if pump_type == "water":
-            motor_endpoint = "http://192.168.9.59:5000/motor2"
-            motor_off_endpoint = "http://192.168.9.59:5000/motor2/off"
-            # else:
-            #     motor_endpoint = "http://192.168.9.59:5000/motor1"
-            #     motor_off_endpoint = "http://192.168.9.59:5000/motor1/off"
-            
-            try:
-                # Nyalakan motor
-                response = requests.post(motor_endpoint, json={"direction": "forward", "speed": 90})
-                print(f"Pompa {pump_type} dinyalakan:", response.status_code)
-                time.sleep(duration)
+            for pump in pumps:
+                pump_type = pump["type"]
+                duration = pump["duration"]
+                volume = pump["volume"]
                 
-                # Matikan motor
-                response = requests.post(motor_off_endpoint)
-                print(f"Pompa {pump_type} dimatikan:", response.status_code)
-                
-                # Simpan history ke database
-                history_data = {
-                    "tanaman": tanaman_name,
-                    "tanaman_no": tanaman_no,
-                    "pump_type": pump_type,
-                    "method": "auto",
-                    "duration": duration,
-                    "volume": volume
-                }
-                response = requests.post("http://192.168.1.2:8000/api/pump_history", json=history_data)
-                if response.status_code == 201:
-                    print("History pompa berhasil disimpan")
+                # Tentukan endpoint motor berdasarkan jenis pompa
+                if pump_type == "water":
+                    motor_endpoint = "http://192.168.9.59:5000/motor2"
+                    motor_off_endpoint = "http://192.168.9.59:5000/motor2/off"
                 else:
-                    print("Gagal menyimpan history pompa:", response.text)
-            except Exception as e:
-                print("Gagal mengontrol pompa:", str(e))
+                    motor_endpoint = "http://192.168.9.59:5000/motor1"
+                    motor_off_endpoint = "http://192.168.9.59:5000/motor1/off"
+                
+                try:
+                    # Nyalakan motor
+                    response = requests.post(motor_endpoint, json={"direction": "forward", "speed": 90})
+                    print(f"Pompa {pump_type} dinyalakan:", response.status_code)
+                    time.sleep(duration)
+                    
+                    # Matikan motor
+                    response = requests.post(motor_off_endpoint)
+                    print(f"Pompa {pump_type} dimatikan:", response.status_code)
+                    
+                    # Simpan history ke database
+                    history_data = {
+                        "tanaman": tanaman_name,
+                        "tanaman_no": tanaman_no,
+                        "pump_type": pump_type,
+                        "method": "auto",
+                        "duration": duration,
+                        "volume": volume
+                    }
+                    response = requests.post("http://192.168.1.2:8000/api/pump_history", json=history_data)
+                    if response.status_code == 201:
+                        print(f"History pompa {pump_type} berhasil disimpan")
+                    else:
+                        print(f"Gagal menyimpan history pompa {pump_type}:", response.text)
+                except Exception as e:
+                    print(f"Gagal mengontrol pompa {pump_type}:", str(e))
         else:
             print("Kondisi tanah optimal, tidak perlu menyalakan pompa.")
     except Exception as e:
         print("Error dalam kontrol pompa:", str(e))
-
+        
 def read_all_parameters(device_id, plant_name, plant_id):
     # Ambil interface dari database
     interface = get_sensor_interface(device_id, plant_id)
