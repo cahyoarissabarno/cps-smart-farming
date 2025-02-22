@@ -32,7 +32,7 @@ query_all = append_crc(bytes([0x01, 0x03, 0x00, 0x00, 0x00, 0x07]))
 def get_sensor_interface(device_id, tanaman_no):
     try:
         print("Getting Interface Data From device_id: " + str(device_id) + ", tanaman_no: " + str(tanaman_no))
-        response = requests.get(f"http://192.168.1.2:8000/api/sensor?device_id={device_id}&tanaman_no={tanaman_no}")
+        response = requests.get(f"http://localhost:8000/api/sensor?device_id={device_id}&tanaman_no={tanaman_no}")
         if response.status_code == 200:
             sensor_data = response.json().get("data", [])
             if sensor_data:
@@ -63,7 +63,7 @@ def open_serial_connection(interface):
 def control_pumps(moisture, temperature, tanaman_no, tanaman_name):
     try:
         # Ambil parameter dari tabel pump_params berdasarkan tanaman_no
-        response = requests.get(f"http://192.168.1.2:8000/api/pump_params?tanaman_no={tanaman_no}")
+        response = requests.get(f"http://localhost:8000/api/pump_params?tanaman_no={tanaman_no}")
         if response.status_code != 200:
             print("Gagal mengambil data pump_params")
             return
@@ -100,11 +100,11 @@ def control_pumps(moisture, temperature, tanaman_no, tanaman_name):
                 
                 # Tentukan endpoint motor berdasarkan jenis pompa
                 if pump_type == "water":
-                    motor_endpoint = "http://192.168.9.59:5000/motor2"
-                    motor_off_endpoint = "http://192.168.9.59:5000/motor2/off"
+                    motor_endpoint = "http://localhost:5000/motor2"
+                    motor_off_endpoint = "http://localhost:5000/motor2/off"
                 else:
-                    motor_endpoint = "http://192.168.9.59:5000/motor1"
-                    motor_off_endpoint = "http://192.168.9.59:5000/motor1/off"
+                    motor_endpoint = "http://localhost:5000/motor1"
+                    motor_off_endpoint = "http://localhost:5000/motor1/off"
                 
                 try:
                     # Nyalakan motor
@@ -125,7 +125,7 @@ def control_pumps(moisture, temperature, tanaman_no, tanaman_name):
                         "duration": duration,
                         "volume": volume
                     }
-                    response = requests.post("http://192.168.1.2:8000/api/pump_history", json=history_data)
+                    response = requests.post("http://localhost:8000/api/pump_history", json=history_data)
                     if response.status_code == 201:
                         print(f"History pompa {pump_type} berhasil disimpan")
                     else:
@@ -219,7 +219,7 @@ def read_all_parameters(device_id, plant_name, plant_id):
         return None
 
 try:
-    data = requests.get("http://192.168.1.2:8000/api/tanaman").json().get("data", [])
+    data = requests.get("http://localhost:8000/api/tanaman").json().get("data", [])
     for item in data:
         print("#####" + "soil_sensor_id: " + str(item["soil_sensor_id"]) + "tanaman: " + item["tanaman"] + "tanaman_no: " + str(item["tanaman_no"]) + "#####")
         
